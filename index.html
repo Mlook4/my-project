@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Abdel Malik Lessons</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -69,15 +70,12 @@
       transform: rotate(180deg);
     }
 
-    iframe {
+    canvas {
       width: 100%;
-      height: 600px;
+      height: auto;
       margin-top: 15px;
-      border: 1px solid #ddd;
       border-radius: 10px;
-      display: none;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
     }
 
     .toggle-theme {
@@ -115,8 +113,7 @@
       border-color: #444;
     }
 
-    body.dark iframe {
-      border-color: #444;
+    body.dark canvas {
       box-shadow: 0 4px 8px rgba(255,255,255,0.05);
     }
 
@@ -126,78 +123,17 @@
         padding: 12px 16px;
       }
 
-      iframe {
-        height: 400px;
-      }
-
       .main-title {
         font-size: 28px;
       }
-
-      .lesson-button {
-        padding: 10px 15px;
-      }
-    }
-
-    /* Customizing the button with 3 dots */
-    .menu-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 10;
-    }
-
-    .menu-btn {
-      background-color: #3498db;
-      color: white;
-      padding: 12px 14px;
-      border-radius: 50%;
-      border: none;
-      cursor: pointer;
-      font-size: 18px;
-    }
-
-    .menu-btn:hover {
-      background-color: #2980b9;
-    }
-
-    .menu {
-      display: none;
-      position: absolute;
-      top: 40px;
-      right: 0;
-      background-color: white;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      border-radius: 8px;
-      overflow: hidden;
-      width: 180px;
-    }
-
-    .menu-item {
-      padding: 10px 15px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    .menu-item:hover {
-      background-color: #f4f4f4;
     }
 
   </style>
 </head>
 <body>
 
-  <div class="menu-container">
-    <button class="menu-btn" onclick="toggleMenu()">☰</button>
-    <div class="menu">
-      <div class="menu-item" onclick="toggleTheme()">Toggle Dark Mode</div>
-      <div class="menu-item">Other Settings</div>
-      <div class="menu-item">Help</div>
-    </div>
-  </div>
-
   <h1 class="main-title">Level 4 Materials</h1><br>
-  <h1>dont woork in phone soory -.-</h1>
+  <h1>Sorry, it doesn't work well on phones -.-</h1>
 
   <div class="lesson-section">
     <h1>📘 Java Lessons</h1>
@@ -205,7 +141,7 @@
       <span>📎 Java - Lesson 1</span>
       <span class="arrow">⬇️</span>
     </button>
-    <iframe id="java1" src="java1.pdf#page=1"></iframe>
+    <div id="java1"></div>
   </div>
 
   <div class="lesson-section">
@@ -214,28 +150,50 @@
       <span>📎 Data Structures - Lesson 1</span>
       <span class="arrow">⬇️</span>
     </button>
-    <iframe id="ds1" src="ds1.pdf#page=1"></iframe>
+    <div id="ds1"></div>
 
     <button class="lesson-button" onclick="togglePdf('ds2', this)">
       <span>📎 Data Structures - Lesson 2</span>
       <span class="arrow">⬇️</span>
     </button>
-    <iframe id="ds2" src="ds2.pdf#page=1"></iframe>
+    <div id="ds2"></div>
   </div>
 
   <script>
-    // Toggle lesson display
-    function togglePdf(iframeId, button) {
-      const iframe = document.getElementById(iframeId);
-      const arrow = button.querySelector('.arrow');
-      const isOpen = iframe.style.display === 'block';
+    // Function to render PDF using PDF.js
+    function renderPdf(pdfUrl, elementId) {
+      const container = document.getElementById(elementId);
+      const canvas = document.createElement('canvas');
+      container.appendChild(canvas);
 
-      document.querySelectorAll('iframe').forEach(el => el.style.display = 'none');
+      // Load the PDF document
+      pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+        // Render the first page
+        pdf.getPage(1).then(function(page) {
+          const viewport = page.getViewport({ scale: 1.5 });
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          const renderContext = {
+            canvasContext: canvas.getContext('2d'),
+            viewport: viewport
+          };
+          page.render(renderContext);
+        });
+      });
+    }
+
+    // Toggle lesson display
+    function togglePdf(pdfId, button) {
+      const arrow = button.querySelector('.arrow');
+      const isOpen = document.getElementById(pdfId).children.length > 0;
+
+      document.querySelectorAll('div[id^="ds"], div[id^="java"]').forEach(el => el.innerHTML = ''); // Clear all other PDFs
       document.querySelectorAll('.arrow').forEach(el => el.textContent = '⬇️');
       document.querySelectorAll('.arrow').forEach(el => el.classList.remove('rotate'));
 
       if (!isOpen) {
-        iframe.style.display = 'block';
+        renderPdf(pdfId + '.pdf', pdfId); // Load the PDF for the button clicked
         arrow.textContent = '⬆️';
         arrow.classList.add('rotate');
       }
@@ -254,12 +212,6 @@
       if (savedTheme === 'dark') {
         document.body.classList.add('dark');
       }
-    }
-
-    // Show or hide the popup menu
-    function toggleMenu() {
-      const menu = document.querySelector('.menu');
-      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
     }
   </script>
 
