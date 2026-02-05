@@ -1,81 +1,233 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>إحصائيات الكلان</title>
-  <style>
-    body { font-family: Arial; background: #333; color: white; text-align: center; padding: 30px; }
-    table { margin: auto; border-collapse: collapse; width: 80%; background: #1e293b; }
-    th, td { padding: 12px; border: 1px solid #334155; }
-    th { background: #334155; }
-    input { padding: 8px; margin: 5px; width: 150px; outline:none;}
-    button { padding: 10px 20px; background: #22c55e; border: none; cursor: pointer; font-weight: bold; }
-  </style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Clan Leaderboard</title>
 
-<h1>📊 إحصائيات الكلان</h1>
+    <!-- مكتبة التشفير -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
-<div>
-  <h2>إضافة لاعب</h2>
-  <input id="name" placeholder="اسم اللاعب">
-  <input id="attacks" type="number" placeholder="عدد الهجمات">
-  <input id="stars" type="number" placeholder="عدد النجوم">
-  <input id="eff" type="number" step="0.01" placeholder="الكفاءة">
-  <br>
-  <button onclick="addPlayer()">إضافة</button>
-</div>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Handjet:wght,ELSH@100..900,2&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+      :root {
+        --background: #f0f0f0;
+        --font: #333;
+        --table-body: #fff;
+        --table-head: #c2c2c2;
+      }
+      body {
+        font-family: Arial;
+        background: var(--background);
+        color: var(--font);
+        text-align: center;
+        padding: 30px;
+        font-family: "Handjet";
+      }
+      table {
+        margin: auto;
+        border-collapse: collapse;
+        width: 80%;
+        background: var(--table-body);
+        user-select: none;
+      }
+      th,
+      td {
+        padding: 12px;
+        border: 1px solid var(--table-head);
+      }
+      th {
+        background: var(--table-head);
+      }
+      input {
+        padding: 10px;
+        font-family: "Handjet";
+        font-size: 22px;
+        margin: 5px;
+        width: 320px;
+        outline: none;
+      }
+      button {
+        padding: 10px 20px;
+        background: #22c55e;
+        color: white;
+        outline: none;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        font-family: "Handjet";
+      }
+      button:focus,
+      button:hover {
+        background: #119140;
+      }
+      .admin-btn {
+        display: inline-block;
+        margin: 5px;
+        padding: 5px 10px;
+        background: var(--table-head);
+        cursor: pointer;
+      }
+      .admin-btn:hover {
+        background-color: #acacac;
+      }
+      .admin-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+  </head>
 
-<h2>اللاعبين</h2>
-<table>
-  <thead>
-    <tr>
-      <th>الاسم</th>
-      <th>الهجمات</th>
-      <th>النجوم</th>
-      <th>الكفاءة</th>
-    </tr>
-  </thead>
-  <tbody id="tableBody"></tbody>
-</table>
-<script>
-  const players = [];
+  <body>
+    <h1>Clan Leaderboard</h1>
 
-  function addPlayer() {
-    const name = document.getElementById('name').value;
-    const attacks = Number(document.getElementById('attacks').value);
-    const stars = Number(document.getElementById('stars').value);
+    <button onclick="login()">دخول الأدمن</button>
+    <button onclick="logout()">تسجيل خروج</button>
 
-    if (!name || attacks <= 0) return alert('ادخل الاسم وعدد الهجمات > 0');
+    <!-- لوحة الأدمن -->
+    <div id="adminPanel">
+      <input id="name" placeholder="اسم اللاعب" />
+      <input id="score" placeholder="النقاط" type="number" />
+      <button onclick="addPlayer()">إضافة / تعديل</button>
+    </div>
 
-    const eff = (stars / attacks).toFixed(2);
+    <table>
+      <thead>
+        <tr>
+          <th>اللاعب</th>
+          <th>النقاط</th>
+          <th id="adminCol">تحكم</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
 
-    players.push({name, attacks, stars, eff});
-    renderTable();
-    
-    document.getElementById('name').value = '';
-    document.getElementById('attacks').value = '';
-    document.getElementById('stars').value = '';
-  }
+    <script>
+      /* =========================
+   🔐 نظام الأدمن
+========================= */
 
-  function renderTable() {
-    const table = document.getElementById('tableBody');
-    table.innerHTML = '';
-    players.forEach(p => {
-      table.innerHTML += `<tr>
-        <td>${p.name}</td>
-        <td>${p.attacks}</td>
-        <td>${p.stars}</td>
-        <td>${p.eff}</td>
-      </tr>`;
-    });
-  }
-</script>
+      // هاش رمز 1234 (MD5)
+      const ADMIN_PASSWORD_HASH = "81dc9bdb52d04dc20036dbd8313ed055";
 
-</body>
+      let isAdmin = false;
+
+      // تحقق تلقائي
+      if (localStorage.getItem("adminAuth") === ADMIN_PASSWORD_HASH) {
+        isAdmin = true;
+      }
+
+      function login() {
+        const pass = prompt("ادخل رمز الأدمن:");
+        if (!pass) return;
+
+        const hash = CryptoJS.MD5(pass).toString();
+
+        if (hash === ADMIN_PASSWORD_HASH) {
+          localStorage.setItem("adminAuth", hash);
+          isAdmin = true;
+          enableAdmin();
+          alert("تم تسجيل الدخول");
+        } else {
+          alert("رمز خاطئ");
+        }
+      }
+
+      function logout() {
+        localStorage.removeItem("adminAuth");
+        isAdmin = false;
+        disableAdmin();
+        alert("تم تسجيل الخروج");
+      }
+
+      function enableAdmin() {
+        document.getElementById("adminPanel").style.display = "block";
+        document.getElementById("adminCol").style.display = "table-cell";
+        renderTable();
+      }
+
+      function disableAdmin() {
+        document.getElementById("adminPanel").style.display = "none";
+        document.getElementById("adminCol").style.display = "none";
+        renderTable();
+      }
+
+      /* =========================
+   📊 بيانات اللاعبين
+========================= */
+
+      let players = JSON.parse(localStorage.getItem("players")) || [];
+
+      function savePlayers() {
+        localStorage.setItem("players", JSON.stringify(players));
+      }
+
+      function addPlayer() {
+        if (!isAdmin) return;
+
+        const name = document.getElementById("name").value;
+        const score = Number(document.getElementById("score").value);
+
+        if (!name) return;
+
+        const existing = players.find((p) => p.name === name);
+
+        if (existing) {
+          existing.score = score;
+        } else {
+          players.push({ name, score });
+        }
+
+        savePlayers();
+        renderTable();
+      }
+
+      function deletePlayer(name) {
+        if (!isAdmin) return;
+
+        players = players.filter((p) => p.name !== name);
+        savePlayers();
+        renderTable();
+      }
+
+      /* =========================
+   🖥️ عرض الجدول
+========================= */
+
+      function renderTable() {
+        const body = document.getElementById("tableBody");
+        body.innerHTML = "";
+
+        players
+          .sort((a, b) => b.score - a.score)
+          .forEach((p) => {
+            body.innerHTML += `
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.score}</td>
+          <td>
+            ${
+              isAdmin
+                ? `<span class="admin-btn"
+                     onclick="deletePlayer('${p.name}')">
+                     حذف
+                   </span>`
+                : ""
+            }
+          </td>
+        </tr>
+      `;
+          });
+      }
+
+      /* تشغيل أولي */
+
+      if (isAdmin) enableAdmin();
+      else disableAdmin();
+
+      renderTable();
+    </script>
+  </body>
 </html>
-
-
-
-
