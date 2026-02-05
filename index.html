@@ -39,7 +39,6 @@
   </thead>
   <tbody id="tableBody"></tbody>
 </table>
-
 <script>
   const players = [];
 
@@ -47,18 +46,17 @@
     const name = document.getElementById('name').value;
     const attacks = Number(document.getElementById('attacks').value);
     const stars = Number(document.getElementById('stars').value);
-    const eff = Number(document.getElementById('eff').value);
 
-    if (!name) return alert('ادخل اسم اللاعب');
+    if (!name || attacks <= 0) return alert('ادخل الاسم وعدد الهجمات > 0');
+
+    const eff = (stars / attacks).toFixed(2);
 
     players.push({name, attacks, stars, eff});
     renderTable();
     
-    // تفريغ الحقول
     document.getElementById('name').value = '';
     document.getElementById('attacks').value = '';
     document.getElementById('stars').value = '';
-    document.getElementById('eff').value = '';
   }
 
   function renderTable() {
@@ -77,3 +75,4 @@
 
 </body>
 </html>
+
